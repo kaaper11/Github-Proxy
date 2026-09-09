@@ -7,10 +7,9 @@ import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface ReposDataMapper {
+
     ReposDataDto toDto(ReposData reposData);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "owner", source = "owner")
-    @Mapping(target = "repositoryName", source = "repositoryName")
     ReposData fromDto(ReposDataDto reposDataDto, String owner, String repositoryName);
 }

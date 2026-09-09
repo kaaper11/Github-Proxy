@@ -2,7 +2,7 @@ package com.kaaper.githubProxy.service;
 
 import com.kaaper.githubProxy.client.GithubClient;
 import com.kaaper.githubProxy.dto.ReposDataDto;
-import com.kaaper.githubProxy.exception.RepoNotFound;
+import com.kaaper.githubProxy.exception.RepoNotFoundException;
 import com.kaaper.githubProxy.mapper.ReposDataMapper;
 import com.kaaper.githubProxy.model.ReposData;
 import com.kaaper.githubProxy.repository.GithubRepository;
@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class GithubServiceTest {
@@ -63,7 +64,7 @@ public class GithubServiceTest {
         String repo = "repo";
 
         //when
-        RepoNotFound exception = Assertions.assertThrows(RepoNotFound.class,
+        RepoNotFoundException exception = Assertions.assertThrows(RepoNotFoundException.class,
                 () -> githubService.getRepo(owner, repo));
 
         //then
@@ -106,7 +107,7 @@ public class GithubServiceTest {
                 .thenThrow(FeignException.class);
 
         // when
-        RepoNotFound exception = Assertions.assertThrows(RepoNotFound.class,
+        RepoNotFoundException exception = Assertions.assertThrows(RepoNotFoundException.class,
                 () -> githubService.getRepo("owner", "repo"));
 
         // then
@@ -116,6 +117,49 @@ public class GithubServiceTest {
                 () -> Assertions.assertEquals("Repository repo not found on owner owner",
                         exception.getMessage())
         );
+    }
+
+    @Test
+    public void updateRepo_dataCorrect_updatedRepo() {
+        // given
+        LocalDateTime now = LocalDateTime.now();
+        ReposData reposData = new ReposData(1L, "name", "desc", "Url", "5", now,
+                "owner", "repo");
+        ReposDataDto reposDataDto = new ReposDataDto("name1", "desc1", "Url1", 6, now);
+
+        when(githubRepository.findByOwnerAndRepositoryName("owner", "repo"))
+                .thenReturn(Optional.of(reposData));
+        when(githubClient.getPostById("owner", "repo")).thenReturn(reposDataDto);
+
+        // when
+        githubService.updateRepo("owner", "repo");
+
+        // then
+        Assertions.assertAll(
+                () -> Assertions.assertEquals("name1", reposData.getFullName()),
+                () -> Assertions.assertEquals("desc1", reposData.getDescription()),
+                () -> Assertions.assertEquals("Url1", reposData.getCloneUrl()),
+                () -> Assertions.assertEquals("6", reposData.getStars())
+        );
+    }
+
+    @Test
+    public void deleteRepo_dataCorrect_deletedRepo() {
+        // given
+        LocalDateTime now = LocalDateTime.now();
+        String owner = "owner";
+        String repo = "repo";
+        ReposData reposData = new ReposData(1L, "name", "desc", "Url", "5", now,
+                "owner", "repo");
+
+        when(githubRepository.findByOwnerAndRepositoryName(owner, repo))
+                .thenReturn(Optional.of(reposData));
+
+        // when
+        githubService.deleteRepo(owner, repo);
+
+        // then
+        verify(githubRepository).delete(reposData);
     }
 
 }
